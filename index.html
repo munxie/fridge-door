@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fridge Door</title>
+<meta name="theme-color" content="#E3E5E1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2A2D2B" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Fridge">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Nanum+Pen+Script&family=Covered+By+Your+Grace&family=Gloria+Hallelujah&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --fridge: #E3E5E1; --fridge-2: #D3D6D1; --fridge-fg: #4A524C;
+  --paper: #F8F4E8; --grid: rgba(70, 110, 160, 0.16);
+  --ink: #2B2A28; --ink-2: #6B675E; --rule: rgba(43, 42, 40, 0.28);
+  --stamp: #B5453A; --shadow: rgba(30, 30, 25, 0.28);
+  --pen-theo: #2C7A4B; --pen-andrei: #8A6800; --pen-maria: #B5342B;
+  --hand-theo: "Gloria Hallelujah", "Segoe Print", "Bradley Hand", cursive;
+  --hand-andrei: "Nanum Pen Script", "Segoe Print", "Bradley Hand", cursive;
+  --hand-maria: "Covered By Your Grace", "Segoe Print", "Bradley Hand", cursive;
+  --type: "Special Elite", "Courier New", Courier, monospace;
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fridge: #2A2D2B; --fridge-2: #1E211F; --fridge-fg: #AEB5AF; --paper: #E9E4D5; --shadow: rgba(0,0,0,.6); color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--fridge);
+  background-image: linear-gradient(90deg, var(--fridge-2), var(--fridge) 18%, var(--fridge) 82%, var(--fridge-2));
+  color: var(--ink); font-family: var(--type); font-size: 16px; line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+.door { max-width: 470px; margin: 0 auto; padding-inline: 16px; padding-block: 36px 40px; }
+.hold { position: relative; }
+.sheet {
+  position: relative; background: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 22px 22px; background-position: 6px 4px;
+  padding: 34px 20px 30px;
+  box-shadow: 0 14px 30px -14px var(--shadow), 0 2px 4px var(--shadow);
+  transform: rotate(-0.5deg);
+  clip-path: polygon(0 7px, 3% 3px, 6% 8px, 10% 2px, 14% 7px, 18% 4px, 22% 9px, 27% 3px, 31% 6px, 36% 2px, 40% 8px, 45% 4px, 50% 7px, 55% 2px, 59% 8px, 64% 3px, 68% 6px, 73% 2px, 77% 8px, 82% 4px, 86% 9px, 90% 3px, 94% 7px, 97% 2px, 100% 6px, 100% 100%, 0 100%);
+}
+.magnet {
+  position: absolute; top: -14px; left: 50%; width: 36px; height: 36px; margin-left: -18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #F08A7E, #C8342B 45%, #8E2118 100%);
+  box-shadow: 0 3px 6px rgba(0,0,0,.35), inset 0 -2px 3px rgba(0,0,0,.25); z-index: 2;
+}
+.magnet.gold { background: radial-gradient(circle at 35% 30%, #FFE9A3, #D9A621 45%, #8A6410 100%); }
+.ring {
+  position: absolute; right: 18px; bottom: 120px; width: 112px; height: 112px; border-radius: 50%;
+  border: 9px solid rgba(120,78,28,.12); box-shadow: inset 0 0 0 2px rgba(120,78,28,.06);
+  transform: rotate(-12deg) scaleX(1.04); filter: blur(.5px); pointer-events: none;
+}
+h1 { font: 400 1.25rem/1.2 var(--type); letter-spacing: .08em; text-transform: uppercase; margin: 0; }
+.big { font-size: 22px; letter-spacing: .04em; }
+.lbl { letter-spacing: .08em; text-transform: uppercase; font-size: 14px; }
+.sub { color: var(--ink-2); font-size: 14px; margin: 4px 0 0; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sig { text-align: right; white-space: nowrap; }
+.sig .lnk { font-size: 22px; }
+section { margin-top: 22px; }
+.mine { margin-top: 18px; }
+.mine .duty-name { font-size: 26px; }
+.mine .box { width: 32px; height: 32px; margin-top: 4px; }
+.mine .box svg { left: -6px; top: -10px; width: 46px; height: 46px; }
+.mine .duty { grid-template-columns: 36px minmax(0,1fr); }
+.sub-sec { margin-top: 12px; }
+p { margin: 0; }
+.small { font-size: 13px; color: var(--ink-2); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.duty { display: grid; grid-template-columns: 30px minmax(0,1fr); column-gap: 10px; align-items: start; }
+.box { width: 26px; height: 26px; border: 1.5px solid var(--ink); border-radius: 2px; background: transparent; padding: 0; position: relative; cursor: pointer; margin-top: 1px; }
+.box:disabled { cursor: default; }
+.box:focus-visible, .pen:focus-visible, .lnk:focus-visible, .who:focus-visible, .tab:focus-visible, .field:focus-visible { outline: 2px solid var(--pen-theo); outline-offset: 3px; }
+.box svg { position: absolute; left: -6px; top: -9px; width: 40px; height: 40px; overflow: visible; }
+.box svg path { fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.box.fresh svg path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw .38s ease-out forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.duty-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.duty-name { font-size: 18px; letter-spacing: .04em; }
+.duty-name.off { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: var(--pen); }
+.dots { flex: 1 1 24px; border-bottom: 1.5px dotted var(--rule); height: .85em; min-width: 16px; }
+.assignee { font-size: 15px; white-space: nowrap; }
+.was { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--pen); text-decoration-skip-ink: none; }
+.hand { font-family: var(--hand); color: var(--pen); }
+.hand-lg { font-size: 22px; line-height: 1; }
+.hand-md { font-size: 19px; line-height: 1.1; }
+.detail { list-style: none; margin: 4px 0 0; padding: 0; font-size: 13px; color: var(--ink-2); }
+.detail li::before { content: "– "; }
+.done-note { margin-top: 4px; }
+.stamp {
+  display: inline-block; font: 400 11px/1 var(--type); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--stamp); border: 1.5px solid var(--stamp); border-radius: 3px; padding: 3px 6px 2px; transform: rotate(-4deg); opacity: .85;
+}
+.pen {
+  font-family: var(--hand); color: var(--pen); font-size: 20px; line-height: 1; background: transparent;
+  border: 1.5px dashed currentColor; border-radius: 48% 52% 45% 55% / 55% 45% 58% 42%; padding: 7px 14px 5px; cursor: pointer; transition: transform .12s;
+}
+.pen:active { transform: scale(.96) rotate(-1deg); }
+.pen:disabled { opacity: .45; cursor: default; }
+.lnk {
+  font-family: var(--hand); color: var(--pen); font-size: 18px; line-height: 1; background: none; border: 0; padding: 2px;
+  cursor: pointer; text-decoration: underline; text-decoration-style: wavy; text-underline-offset: 3px; text-decoration-thickness: 1px;
+}
+.lnk:disabled { opacity: .45; cursor: default; text-decoration: none; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.more { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 26px; padding-top: 8px; border-top: 1px solid var(--rule); }
+.tab { font: 400 13px/1.4 var(--type); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: none; border: 0; padding: 4px 0; cursor: pointer; border-bottom: 1.5px solid transparent; }
+.tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.chooser { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-top: 6px; }
+.turn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 17px; }
+.turn .hand-lg { font-size: 26px; }
+.tallies { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; }
+.tally { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tally .nm { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.tally svg { display: block; width: 44px; height: 12px; overflow: visible; }
+.tally svg path { fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.rooms { display: flex; flex-direction: column; gap: 6px; }
+.room { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; min-height: 34px; }
+.room-name { font-size: 16px; letter-spacing: .04em; }
+.marks { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px 10px; }
+.mark { display: inline-flex; align-items: baseline; gap: 3px; transform: rotate(var(--tilt)); }
+.mark .e { font-size: 18px; line-height: 1; }
+.mark .by { font-size: 15px; line-height: 1; }
+.mark.q .e { font-family: var(--hand); color: var(--pen); font-size: 24px; }
+.mark button { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: baseline; gap: 3px; }
+.plus { width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed var(--pen); color: var(--pen); background: none; cursor: pointer; font-family: var(--hand); font-size: 22px; line-height: 1; padding: 0; }
+.wk { display: grid; grid-template-columns: 6.6rem minmax(0,1fr); gap: 4px 10px; align-items: baseline; font-size: 14px; padding: 5px 0; }
+.wk .d { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wk .a { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.wk .a span { white-space: nowrap; }
+.wk .a button { font: inherit; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; border-bottom: 1px dotted var(--rule); }
+.rules { margin: 0; padding-left: 18px; font-size: 14px; }
+.rules li { margin-bottom: 4px; }
+.streaks { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
+.streaks .hand { font-size: 20px; line-height: 1; }
+.status { margin-top: 14px; font-size: 12px; color: var(--ink-2); min-height: 1em; }
+.off-sheet { margin-top: 18px; text-align: center; font-size: 12px; color: var(--fridge-fg); }
+.whoami { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+.who { font-family: var(--hand); color: var(--pen); font-size: 30px; line-height: 1; background: none; border: 0; padding: 10px 6px; text-align: left; cursor: pointer; border-bottom: 1.5px dashed var(--rule); }
+.field { width: 100%; margin-top: 12px; font: 400 22px/1.2 var(--type); letter-spacing: .1em; padding: 8px 6px; background: transparent; border: 0; border-bottom: 1.5px solid var(--ink); color: var(--ink); text-transform: uppercase; }
+.p-theo { --pen: var(--pen-theo); --hand: var(--hand-theo); }
+.p-andrei { --pen: var(--pen-andrei); --hand: var(--hand-andrei); }
+.p-maria { --pen: var(--pen-maria); --hand: var(--hand-maria); }
+@media (max-width: 380px) { .sheet { padding-inline: 14px; } .wk { grid-template-columns: 1fr; gap: 2px; } }
+@media (prefers-reduced-motion: reduce) { .box.fresh svg path { animation: none; stroke-dashoffset: 0; } .pen { transition: none; } }
+</style>
+</head>
+<body>
+<main class="door">
+  <div class="hold">
+    <div class="sheet">
+      <div id="app"></div>
+      <div class="ring" aria-hidden="true"></div>
+    </div>
+    <div class="magnet" id="magnet"></div>
+  </div>
+  <p class="off-sheet" id="foot"></p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- fixed facts ---------- */
+  var ANCHOR = new Date(2026, 9, 5); // Monday 5 Oct 2026 = week 1
+  var WEEK_MS = 7 * 864e5;
+  var ORDER = ['theo', 'andrei', 'maria'];
+  var NAME = { theo: 'Theo', andrei: 'Andrei', maria: 'Maria' };
+  var DUTIES = {
+    oven: { name: 'Oven', detail: ['inside of the oven + trays', 'stove top', 'counters and the sink edge'] },
+    sweep: { name: 'Sweeping', detail: ['kitchen, living room, hallway', 'sweepings in the bin, not in a pile'] }
+  };
+  var DUTY_IDS = ['oven', 'sweep'];
+  var ROTA = [['theo', 'andrei'], ['maria', 'theo'], ['andrei', 'maria']];
+  var ROOMS = [['kitchen', 'Kitchen'], ['bathroom', 'Bathroom'], ['hall', 'Hallway'], ['living', 'Living room']];
+  var QUIPS = {
+    oven: ['oven: defeated', 'grease has left the building', 'roast-ready'],
+    sweep: ['you could eat off that floor (don’t)', 'dust bunnies evicted', 'floor: shiny'],
+    trash: ['bin liberated', 'out it goes', 'someone had to']
+  };
+  var MARK_TTL = 3 * 864e5;
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /* ---------- date helpers ---------- */
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function mondayOf(d) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+  function weekIndex(d) { return Math.round((mondayOf(d) - ANCHOR) / WEEK_MS); }
+  function weekStart(i) { return new Date(ANCHOR.getFullYear(), ANCHOR.getMonth(), ANCHOR.getDate() + 7 * i); }
+  function weekEnd(i) { var a = weekStart(i); return new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6); }
+  function deadline(i) { var e = weekEnd(i); return new Date(e.getFullYear(), e.getMonth(), e.getDate(), 21, 0, 0); }
+  function dm(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function rangeText(i) { var a = weekStart(i), b = weekEnd(i); return a.getMonth() === b.getMonth() ? a.getDate() + '–' + b.getDate() + ' ' + MONTHS[b.getMonth()] : dm(a) + ' – ' + dm(b); }
+  function hash(s) { var h = 7; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
+
+  /* ---------- state ---------- */
+  var cfg = window.FRIDGE || {};
+  var sb = null, chan = null;
+  var me = null, code = null;
+  var docs = {};          // id -> data   ('weeks/2026-10-05', 'trash/log', 'rooms/kitchen')
+  var connected = false, wrongCode = false, loaded = false;
+  var ui = { pick: null, confirmQ: null, reassign: null, fresh: null, status: '', open: null };
+  var chains = {};
+
+  try { me = localStorage.getItem('fd-me'); if (!NAME[me]) { me = null; } } catch (e) {}
+  try { code = localStorage.getItem('fd-code') || null; } catch (e) {}
+
+  /* ---------- derived ---------- */
+  function weekDoc(i) { return docs['weeks/' + ymd(weekStart(i))] || {}; }
+  function trashDoc() { return docs['trash/log'] || null; }
+  function roomDoc(id) { return docs['rooms/' + id] || {}; }
+  function assign(i) {
+    var base = ROTA[((i % 3) + 3) % 3], over = weekDoc(i).over || {}, out = {};
+    DUTY_IDS.forEach(function (d, k) { out[d] = { printed: base[k], person: over[d] ? over[d].to : base[k], by: over[d] ? over[d].by : null }; });
+    return out;
+  }
+  function doneRec(i, d) { return (weekDoc(i).done || {})[d] || null; }
+  function onTime(i, d) { var r = doneRec(i, d); return !!r && new Date(r.at) <= deadline(i); }
+  function streaks(cur) {
+    var out = { theo: 0, andrei: 0, maria: 0, house: 0 }, last = Math.max(cur, 0), now = new Date();
+    ORDER.forEach(function (p) {
+      var n = 0;
+      for (var i = last; i >= 0; i--) {
+        var a = assign(i), mine = DUTY_IDS.filter(function (d) { return a[d].person === p; });
+        if (!mine.length) { continue; }
+        var ok = mine.every(function (d) { return onTime(i, d); });
+        if (i === last && !ok && !mine.some(function (d) { return doneRec(i, d); }) && now <= deadline(i)) { continue; }
+        if (!ok) { break; }
+        n++;
+      }
+      out[p] = n;
+    });
+    var h = 0;
+    for (var i = last; i >= 0; i--) {
+      var all = DUTY_IDS.every(function (d) { return onTime(i, d); });
+      if (i === last && !all && now <= deadline(i)) { continue; }
+      if (!all) { break; }
+      h++;
+    }
+    out.house = h;
+    return out;
+  }
+  function trashNext() { var t = (trashDoc() || {}).turns || []; if (!t.length) { return null; } return ORDER[(ORDER.indexOf(t[t.length - 1].by) + 1) % 3]; }
+  function trashCounts() {
+    var now = new Date(), c = { theo: 0, andrei: 0, maria: 0 };
+    ((trashDoc() || {}).turns || []).forEach(function (t) { var d = new Date(t.at); if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && c[t.by] !== undefined) { c[t.by]++; } });
+    return c;
+  }
+  function liveMarks(roomId) {
+    var m = roomDoc(roomId).marks || {}, out = [], now = Date.now();
+    ORDER.forEach(function (p) { if (m[p] && now - new Date(m[p].at) < MARK_TTL) { out.push({ by: p, e: m[p].e, at: m[p].at }); } });
+    return out;
+  }
+
+  /* ---------- drawing ---------- */
+  var TICKS = ['M4 13 L9 19 L21 5', 'M3 12 C7 15 8 18 10 19 C13 12 17 8 22 4', 'M5 14 L10 18 L20 6 L23 3'];
+  function tickSvg(key, pen) { var h = hash(key), rot = (h % 13) - 6; return '<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' + rot + 'deg)"><path d="' + TICKS[h % 3] + '" pathLength="40" style="stroke:' + pen + '"></path></svg>'; }
+  function tallySvg(n, pen, seed) {
+    var parts = [], h = hash(seed);
+    for (var i = 0; i < n; i++) {
+      var g = Math.floor(i / 5), k = i % 5, j = ((h >> (i % 20)) & 3) - 1.5, gx = 2 + g * 30;
+      if (k < 4) { parts.push('M' + (gx + k * 6 + j * .4) + ' 4 L' + (gx + k * 6 + 1 + j * .3) + ' 24'); } else { parts.push('M' + (gx - 3) + ' 21 L' + (gx + 22) + ' 6'); }
+    }
+    if (!n) { return '<svg viewBox="0 0 120 28"><path d="M2 20 L14 20" style="stroke:' + pen + ';opacity:.35"></path></svg>'; }
+    return '<svg viewBox="0 0 120 28"><path d="' + parts.join(' ') + '" style="stroke:' + pen + '"></path></svg>';
+  }
+  function pcls(p) { return 'p-' + p; }
+  function hand(p, text, size) { return '<span class="hand ' + (size || 'hand-md') + ' ' + pcls(p) + '">' + text + '</span>'; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /* ---------- render ---------- */
+  function render() {
+    var app = document.getElementById('app');
+    var now = new Date(), cur = weekIndex(now), pre = cur < 0, t = pre ? 0 : cur;
+    var st = streaks(t);
+    document.getElementById('magnet').className = 'magnet' + (st.house >= 4 ? ' gold' : '');
+
+    if (!cfg.url || !cfg.anonKey || /YOUR-/.test(cfg.url + cfg.anonKey)) {
+      app.innerHTML = '<h1>Not set up yet</h1><p class="sub">config.js still has the placeholder values. See README.md.</p>';
+      return;
+    }
+    if (!code || wrongCode) {
+      app.innerHTML = '<h1>Our house</h1><p class="sub">' + (wrongCode ? 'That code didn’t open the sheet. Try again.' : 'House code?') + '</p>'
+        + '<form id="codeform"><input class="field" id="codein" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="House code"><div class="row"><button type="submit" class="pen p-andrei">open →</button></div></form>';
+      return;
+    }
+    if (!me) {
+      app.innerHTML = '<h1>Our house</h1><p class="sub">Who’s holding the pen?</p><div class="whoami">'
+        + ORDER.map(function (p) { return '<button type="button" class="who ' + pcls(p) + '" data-act="me" data-p="' + p + '">' + NAME[p] + '</button>'; }).join('') + '</div>';
+      return;
+    }
+
+    var canWrite = connected && loaded;
+    var a = assign(t), mine = DUTY_IDS.filter(function (d) { return a[d].person === me; }), others = DUTY_IDS.filter(function (d) { return a[d].person !== me; });
+    var h = '<div class="top"><div><h1>' + (pre ? 'From Mon ' + dm(weekStart(0)) : rangeText(t)) + '</h1></div>'
+      + '<div class="sig"><button type="button" class="lnk hand-lg ' + pcls(me) + '" data-act="unme" style="text-decoration:none">— ' + NAME[me] + '</button></div></div>';
+
+    h += '<section class="mine"><div class="stack">';
+    if (mine.length) { mine.forEach(function (d) { h += dutyLine(t, d, a[d], canWrite, now, true); }); } else { h += '<p class="big">Week off.</p>'; }
+    if (!pre && t >= 1) { var pa = assign(t - 1); DUTY_IDS.forEach(function (d) { if (pa[d].person === me && !doneRec(t - 1, d)) { h += dutyLine(t - 1, d, pa[d], canWrite, now, true); } }); }
+    h += '</div></section>';
+
+    var next = trashNext(), td = trashDoc() || {}, full = td.full;
+    h += '<section><div class="turn"><span class="lbl">Trash</span>';
+    if (!next) { h += '<span>nobody yet</span>'; } else if (next === me) { h += hand(me, 'you’re up', 'hand-lg'); } else { h += '<span>next:</span>' + hand(next, NAME[next], 'hand-lg'); }
+    if (full) { h += hand(full.by, 'full!', 'hand-md'); }
+    h += '</div><div class="row"><button type="button" class="pen ' + pcls(me) + '" data-act="trash"' + (canWrite ? '' : ' disabled') + '>took it out →</button>'
+      + (full || !canWrite ? '' : '<button type="button" class="lnk ' + pcls(me) + '" data-act="full">full</button>') + '</div>';
+    var tc = trashCounts();
+    h += '<div class="tallies">' + ORDER.map(function (p) { return '<div class="tally ' + pcls(p) + '"><span class="nm">' + NAME[p] + '</span>' + tallySvg(tc[p], 'var(--pen)', p + now.getMonth()) + '</div>'; }).join('') + '</div></section>';
+
+    h += '<section><div class="stack">';
+    others.forEach(function (d) { h += dutyLine(t, d, a[d], canWrite, now, false); });
+    if (!pre && t >= 1) { var pb = assign(t - 1); DUTY_IDS.forEach(function (d) { if (pb[d].person !== me && !doneRec(t - 1, d)) { h += dutyLine(t - 1, d, pb[d], canWrite, now, false); } }); }
+    h += '</div></section>';
+
+    h += '<section><div class="rooms">';
+    ROOMS.forEach(function (r) {
+      var id = r[0], marks = liveMarks(id), my = marks.filter(function (m) { return m.by === me; })[0];
+      h += '<div class="room"><span class="room-name">' + r[1] + '</span><div class="marks">';
+      marks.forEach(function (m) {
+        var tilt = ((hash(id + m.by + m.at) % 9) - 4) + 'deg';
+        var inner = '<span class="e">' + m.e + '</span><span class="by hand">' + NAME[m.by] + '</span>';
+        h += '<span class="mark ' + pcls(m.by) + (m.e === '?' ? ' q' : '') + '" style="--tilt:' + tilt + '">' + (m.by === me && canWrite ? '<button type="button" data-act="unmark" data-room="' + id + '">' + inner + '</button>' : inner) + '</span>';
+      });
+      if (!my && canWrite) {
+        if (ui.pick === id) {
+          h += '<span class="mark ' + pcls(me) + '"><button type="button" data-act="mark" data-room="' + id + '" data-e="👏"><span class="e">👏</span></button></span>'
+            + '<span class="mark q ' + pcls(me) + '"><button type="button" data-act="askq" data-room="' + id + '"><span class="e">?</span></button></span>'
+            + '<button type="button" class="lnk ' + pcls(me) + '" data-act="pick" data-room="" style="font-size:15px">×</button>';
+        } else if (ui.confirmQ === id) {
+          h += '<span class="small">3 days. sure?</span><button type="button" class="lnk ' + pcls(me) + '" data-act="mark" data-room="' + id + '" data-e="?">yes</button><button type="button" class="lnk ' + pcls(me) + '" data-act="pick" data-room="">no</button>';
+        } else {
+          h += '<button type="button" class="plus ' + pcls(me) + '" data-act="pick" data-room="' + id + '" aria-label="Mark ' + r[1] + '">+</button>';
+        }
+      }
+      h += '</div></div>';
+    });
+    h += '</div></section>';
+
+    h += '<div class="more">' + [['next', 'coming up'], ['daily', 'every day'], ['streaks', 'streaks']].map(function (x) { return '<button type="button" class="tab' + (ui.open === x[0] ? ' on' : '') + '" data-act="open" data-o="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+
+    if (ui.open === 'next') {
+      h += '<section class="sub-sec">';
+      for (var i = t + 1; i <= t + 4; i++) {
+        var ai = assign(i);
+        h += '<div class="wk"><span class="d">' + rangeText(i) + '</span><span class="a">';
+        DUTY_IDS.forEach(function (d) {
+          var x = ai[d], k = ymd(weekStart(i)) + ':' + d;
+          var nameHtml = x.by ? '<span class="was ' + pcls(x.by) + '">' + NAME[x.printed] + '</span> ' + hand(x.by, NAME[x.person], '') : NAME[x.person];
+          h += '<span>' + DUTIES[d].name + ': ' + (canWrite ? '<button type="button" data-act="reassign" data-k="' + k + '">' + nameHtml + '</button>' : nameHtml) + '</span>';
+        });
+        h += '</span>';
+        if (ui.reassign && ui.reassign.indexOf(ymd(weekStart(i)) + ':') === 0) {
+          var rd = ui.reassign.split(':')[1], curP = ai[rd].person;
+          h += '<span></span><span class="chooser">' + ORDER.filter(function (p) { return p !== curP; }).map(function (p) { return '<button type="button" class="lnk ' + pcls(me) + '" data-act="setover" data-k="' + ui.reassign + '" data-p="' + p + '">' + NAME[p] + '</button>'; }).join('')
+            + (ai[rd].by ? '<button type="button" class="lnk ' + pcls(me) + '" data-act="setover" data-k="' + ui.reassign + '" data-p="">as printed</button>' : '')
+            + '<button type="button" class="lnk ' + pcls(me) + '" data-act="reassign" data-k="">×</button></span>';
+        }
+        h += '</div>';
+      }
+      h += '<p class="small">Tap a name to rewrite it.</p></section>';
+    }
+    if (ui.open === 'daily') {
+      h += '<section class="sub-sec"><ol class="rules"><li>Cooked or ate: stove and counter wiped, scraps binned, your dishes done before bed.</li><li>Cooked for the house: the eaters clean.</li><li>Bin full: out it goes, new bag in, tap the button.</li><li>Not sure whose mess: ask in the chat.</li><li>Weekly duties due Sunday 21:00.</li></ol></section>';
+    }
+    if (ui.open === 'streaks') {
+      h += '<section class="sub-sec"><div class="streaks">' + ORDER.map(function (p) { return '<span>' + NAME[p] + ' ' + hand(p, st[p] + ' wk' + (st[p] === 1 ? '' : 's'), '') + '</span>'; }).join('')
+        + '<span>house ' + hand('andrei', st.house + ' wks' + (st.house >= 4 ? ' ★' : ''), '') + '</span></div><p class="small">On-time weeks in a row. Four house weeks turns the magnet gold.</p></section>';
+    }
+    h += '<p class="status">' + esc(ui.status) + '</p>';
+    app.innerHTML = h;
+  }
+
+  function dutyLine(i, d, x, canWrite, now, mine) {
+    var rec = doneRec(i, d), key = ymd(weekStart(i)) + ':' + d, isLate = !rec && now > deadline(i), cur = weekIndex(now);
+    var h = '<div class="duty' + (mine ? ' is-mine' : '') + '">';
+    h += '<button type="button" class="box' + (ui.fresh === key ? ' fresh' : '') + '" data-act="tick" data-k="' + key + '" aria-pressed="' + !!rec + '" aria-label="' + DUTIES[d].name + (rec ? ', done' : '') + '"' + (canWrite ? '' : ' disabled') + '>' + (rec ? tickSvg(key + rec.at, 'var(--pen-' + rec.by + ')') : '') + '</button>';
+    h += '<div><div class="duty-h"><span class="duty-name' + (rec ? ' off ' + pcls(rec.by) : '') + '">' + DUTIES[d].name + '</span><span class="dots"></span>'
+      + '<span class="assignee">' + (mine ? '' : (x.by ? '<span class="was ' + pcls(x.by) + '">' + NAME[x.printed] + '</span> ' + hand(x.by, NAME[x.person], '') : NAME[x.person])) + '</span>' + (isLate ? '<span class="stamp">late</span>' : '') + '</div>';
+    if (rec) { h += '<div class="done-note">' + hand(rec.by, QUIPS[d][rec.q || 0] + (mine ? '' : ' — ' + NAME[rec.by]), 'hand-md') + '</div>'; }
+    else if (mine) { h += '<ul class="detail">' + DUTIES[d].detail.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul>'; }
+    if (i !== cur && cur >= 0) { h += '<p class="small">from ' + rangeText(i) + '</p>'; }
+    h += '</div></div>';
+    return h;
+  }
+
+  /* ---------- data layer (Supabase) ---------- */
+  function setStatus(s) { ui.status = s; var el = document.querySelector('.status'); if (el) { el.textContent = s; } }
+  function connect() {
+    if (!code || !window.supabase) { return; }
+    sb = window.supabase.createClient(cfg.url, cfg.anonKey, { global: { headers: { 'x-house-code': code } } });
+    chan = sb.channel('house-' + hash(code)).on('broadcast', { event: 'changed' }, function () { loadAll(); }).subscribe();
+    loadAll();
+  }
+  function loadAll() {
+    if (!sb) { return Promise.resolve(); }
+    return sb.from('docs').select('id,data').then(function (res) {
+      if (res.error) { connected = false; setStatus('Can’t reach the sheet (' + res.error.message + ').'); render(); return; }
+      var next = {}, seenHouse = false;
+      res.data.forEach(function (r) { if (r.id === '_house') { seenHouse = true; } else { next[r.id] = r.data || {}; } });
+      if (!seenHouse) { wrongCode = true; connected = false; try { localStorage.removeItem('fd-code'); } catch (e) {} render(); return; }
+      docs = next; connected = true; loaded = true; wrongCode = false; setStatus(''); render();
+    });
+  }
+  function write(id, data) {
+    if (!sb) { return; }
+    var chain = chains[id] || Promise.resolve();
+    chains[id] = chain.then(function () {
+      setStatus('saving…');
+      return sb.from('docs').upsert({ id: id, data: data, updated_at: new Date().toISOString() }).then(function (res) {
+        if (res.error) { setStatus('Couldn’t save: ' + res.error.message); loadAll(); return; }
+        setStatus('');
+        if (chan) { chan.send({ type: 'broadcast', event: 'changed', payload: { id: id } }); }
+      });
+    });
+  }
+  function clone(o) { return JSON.parse(JSON.stringify(o || {})); }
+
+  function toggleTick(key) {
+    var parts = key.split(':'), id = 'weeks/' + parts[0], d = parts[1], doc = clone(docs[id]); doc.done = doc.done || {};
+    if (doc.done[d]) { delete doc.done[d]; ui.fresh = null; }
+    else { doc.done[d] = { by: me, at: new Date().toISOString(), q: Math.floor(Math.random() * QUIPS[d].length) }; ui.fresh = key; celebrate(true); }
+    docs[id] = doc; render(); write(id, doc);
+  }
+  function setOver(key, p) {
+    var parts = key.split(':'), id = 'weeks/' + parts[0], d = parts[1], doc = clone(docs[id]); doc.over = doc.over || {};
+    if (p) { doc.over[d] = { to: p, by: me }; } else { delete doc.over[d]; }
+    docs[id] = doc; ui.reassign = null; render(); write(id, doc);
+  }
+  function tookOut() {
+    var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || [];
+    doc.turns.push({ by: me, at: new Date().toISOString(), q: Math.floor(Math.random() * QUIPS.trash.length) });
+    if (doc.turns.length > 60) { doc.turns = doc.turns.slice(-60); }
+    doc.full = null; docs[id] = doc; celebrate(false); render(); write(id, doc);
+  }
+  function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
+  function mark(roomId, e) {
+    var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
+    Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });
+    if (e) { doc.marks[me] = { e: e, at: new Date().toISOString() }; } else { delete doc.marks[me]; }
+    docs[id] = doc; ui.pick = null; ui.confirmQ = null; render(); write(id, doc);
+  }
+  function celebrate(big) {
+    if (typeof window.confetti !== 'function') { return; }
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+    var colors = ['#2C7A4B', '#8A6800', '#B5342B', '#D9A621', '#F8F4E8'];
+    if (big) {
+      window.confetti({ particleCount: 110, spread: 75, startVelocity: 38, origin: { y: .6 }, colors: colors, scalar: .95 });
+      setTimeout(function () { window.confetti({ particleCount: 60, spread: 110, startVelocity: 28, origin: { y: .55 }, colors: colors, scalar: .8 }); }, 180);
+    } else { window.confetti({ particleCount: 40, spread: 60, startVelocity: 25, origin: { y: .7 }, colors: colors, scalar: .8 }); }
+  }
+
+  /* ---------- events ---------- */
+  var app = document.getElementById('app');
+  app.addEventListener('submit', function (e) {
+    if (e.target.id !== 'codeform') { return; }
+    e.preventDefault();
+    var v = (document.getElementById('codein').value || '').trim().toUpperCase();
+    if (!v) { return; }
+    code = v; wrongCode = false;
+    try { localStorage.setItem('fd-code', v); } catch (x) {}
+    render(); connect();
+  });
+  app.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b || b.disabled) { return; }
+    var act = b.dataset.act;
+    if (act === 'me') { me = b.dataset.p; try { localStorage.setItem('fd-me', me); } catch (x) {} render(); return; }
+    if (act === 'unme') { me = null; try { localStorage.removeItem('fd-me'); } catch (x) {} render(); return; }
+    if (act === 'open') { ui.open = ui.open === b.dataset.o ? null : b.dataset.o; ui.reassign = null; render(); return; }
+    if (!connected) { return; }
+    if (act === 'tick') { toggleTick(b.dataset.k); }
+    else if (act === 'trash') { tookOut(); }
+    else if (act === 'full') { binFull(); }
+    else if (act === 'pick') { ui.pick = b.dataset.room || null; ui.confirmQ = null; render(); }
+    else if (act === 'askq') { ui.confirmQ = b.dataset.room; ui.pick = null; render(); }
+    else if (act === 'mark') { mark(b.dataset.room, b.dataset.e); }
+    else if (act === 'unmark') { mark(b.dataset.room, null); }
+    else if (act === 'reassign') { ui.reassign = b.dataset.k || null; render(); }
+    else if (act === 'setover') { setOver(b.dataset.k, b.dataset.p); }
+  });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && sb) { loadAll(); } });
+  setInterval(function () { if (sb && !document.hidden && !ui.pick && !ui.confirmQ && !ui.reassign) { loadAll(); } }, 60 * 1000);
+
+  /* ---------- boot ---------- */
+  if (cfg.pactUrl) { document.getElementById('foot').innerHTML = '<a href="' + esc(cfg.pactUrl) + '" target="_blank" rel="noopener" style="color:inherit">The agreement behind the sheet</a>'; }
+  render();
+  if (code) { connect(); }
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+})();
+</script>
+</body>
+</html>
