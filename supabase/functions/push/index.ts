@@ -1,5 +1,5 @@
 // Fridge Door push sender. Deployed as a Supabase Edge Function (no JWT check; auth is the house code or the cron secret).
-// Two callers: the app (kind "full" | "test", with x-house-code) and pg_cron every hour (kind "tick", with x-cron-secret).
+// Two callers: the app (kind "test", with x-house-code) and pg_cron every 5 minutes (kind "tick", with x-cron-secret).
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -68,15 +68,18 @@ function scheduled(docs: Docs, now: Date, msgs: Msg[], updates: { id: string; da
     const a = assign(docs, i);
     DUTY_IDS.forEach((d) => { if (!done(docs, i, d)) msgs.push({ to: a[d], title: DUTY_NAME[d] + " — due tomorrow 21:00", body: "Still open on the sheet.", tag: "duty-" + d }); });
   }
-  // 2. Bin full for a day and it's your turn → once a day until someone takes it out.
+  // 2. Bin flagged full → next person, once it has been full for 5 min (so a mis-tap can be undone),
+  //    then again once a day while it stays full.
   const td = docs["trash/log"] || {};
   const full = td.full;
   const next = trashNext(docs);
   if (full && next) {
     const age = now.getTime() - new Date(full.at).getTime();
     const since = full.nudgedAt ? now.getTime() - new Date(full.nudgedAt).getTime() : Infinity;
-    if (age >= 24 * 3600e3 && since >= 24 * 3600e3) {
-      msgs.push({ to: next, title: "Trash: you’re up", body: "The bin’s been full since " + (full.by && NAME[full.by] ? NAME[full.by] + " flagged it " : "") + "yesterday.", tag: "trash" });
+    if (age >= 5 * 60e3 && since >= 24 * 3600e3) {
+      const who = full.by && NAME[full.by] ? NAME[full.by] : "Someone";
+      const body = full.nudgedAt ? "Still full since yesterday." : who + " says the bin’s full.";
+      msgs.push({ to: next, title: "Trash: you’re up", body, tag: "trash" });
       updates.push({ id: "trash/log", data: { ...td, full: { ...full, nudgedAt: now.toISOString() } } });
     }
   }
@@ -105,12 +108,6 @@ Deno.serve(async (req) => {
   if (body.kind === "tick") {
     if (!isCron) return json({ error: "cron only" }, 403);
     scheduled(docs, now, msgs, updates);
-  } else if (body.kind === "full") {
-    // Someone just flagged the bin: tell whoever is next, right away (unless that's the flagger).
-    const by = NAME[body.by] ? body.by : null;
-    const next = trashNext(docs);
-    const to = next ? (next === by ? [] : [next]) : ORDER.filter((p) => p !== by);
-    to.forEach((p) => msgs.push({ to: p, title: "Trash: you’re up", body: (by ? NAME[by] : "Someone") + " says the bin’s full.", tag: "trash" }));
   } else if (body.kind === "test") {
     if (NAME[body.to]) msgs.push({ to: body.to, title: "Reminders are on", body: "You’ll hear from the fridge the day before a chore is due, or when the bin’s been full for a day and it’s your turn.", tag: "test" });
   } else {

@@ -29,12 +29,12 @@ insert into public.docs (id, data) values ('_house', '{}'::jsonb) on conflict (i
 -- ---------------------------------------------------------------------------
 -- Push reminders (optional). Needs the `push` Edge Function deployed with secrets
 -- VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET. Then run this once, replacing CRONSECRET
--- with the same value you gave the function. The job calls the function every hour; the
+-- with the same value you gave the function. The job calls the function every 5 minutes; the
 -- function decides (Amsterdam time) whether anything is due.
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 select cron.unschedule(jobid) from cron.job where jobname = 'fridge-push';
-select cron.schedule('fridge-push', '5 * * * *', $$
+select cron.schedule('fridge-push', '*/5 * * * *', $$
   select net.http_post(
     url := 'https://qxblhbnxadztoksjhtes.supabase.co/functions/v1/push',
     headers := '{"Content-Type": "application/json", "x-cron-secret": "CRONSECRET"}'::jsonb,

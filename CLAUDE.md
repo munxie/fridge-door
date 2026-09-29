@@ -7,7 +7,7 @@ Shared-house chore sheet for three housemates (Theo, Andrei, Maria), styled as a
 - `config.js` — Supabase project URL + publishable key (safe to commit).
 - `schema.sql` — table `docs(id text pk, data jsonb, updated_at)`, RLS policies, `house_ok()` which checks the `x-house-code` request header. The house code itself lives only in that function in Supabase, never in this repo.
 - `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `badge.png` (white silhouette for Android's status bar) — PWA shell. Icons are rendered by a PIL script, not hand-drawn; regenerate all sizes together.
-- `supabase/functions/push/index.ts` — Edge Function that sends web push. Called by the app (`kind: full | test`, auth = `x-house-code`) and by pg_cron hourly (`kind: tick`, auth = `x-cron-secret`). Duplicates ANCHOR/ORDER/ROTA; keep in sync with index.html. Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET. Deploy: `supabase functions deploy push` (verify_jwt off in supabase/config.toml).
+- `supabase/functions/push/index.ts` — Edge Function that sends web push. Called by the app (`kind: test`, auth = `x-house-code`) and by pg_cron every 5 min (`kind: tick`, auth = `x-cron-secret`). Duplicates ANCHOR/ORDER/ROTA; keep in sync with index.html. Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET. Deploy: `supabase functions deploy push` (verify_jwt off in supabase/config.toml).
 - `README.md` — setup and usage.
 
 ## Data model (one row per doc id)
@@ -21,7 +21,7 @@ Shared-house chore sheet for three housemates (Theo, Andrei, Maria), styled as a
 Writes are upserts via supabase-js; a realtime broadcast on channel `house-<hash(code)>` tells other phones to refetch. Also refetches on visibilitychange and every 60 s.
 
 ## Reminders
-Marking the bin full sends "you're up" to the next person immediately (`kind: full` from the app). Two scheduled triggers, decided inside the function in Europe/Amsterdam time (cron fires hourly at :05): Saturday 10:00 an open duty goes to its assignee ("due tomorrow 21:00"); and when `trash/log.full` is 24 h old and nobody took it out, the next person gets "you're up", once a day (the function stamps `full.nudgedAt`). Turning reminders on sends one test push (`kind: test`).
+Decided inside the function in Europe/Amsterdam time; pg_cron fires it every 5 minutes. (1) Saturday 10:00: an open duty goes to its assignee ("due tomorrow 21:00"). (2) `trash/log.full` at least 5 min old (so a mis-tap can be undone) → next person gets "you're up"; the function stamps `full.nudgedAt` and repeats once a day while it stays full. Turning reminders on sends one test push (`kind: test`).
 
 ## Hosting
 Static; GitHub Pages from `main` root. Supabase project: qxblhbnxadztoksjhtes (already set up, schema applied).

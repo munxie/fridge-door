@@ -475,7 +475,7 @@ p { margin: 0; }
     if (!doc.turns.length || doc.turns[doc.turns.length - 1].by !== me) { return; }
     doc.turns.pop(); docs[id] = doc; render(); write(id, doc);
   }
-  function binFull(on) { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = on === false ? null : { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); if (on !== false) { notify({ kind: 'full' }); } }
+  function binFull(on) { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = on === false ? null : { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
   function mark(roomId, e) {
     var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
     Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });
