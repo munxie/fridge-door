@@ -32,7 +32,7 @@ Open the URL → type the house code → tap your name. Then add it to the home 
 
 ## Reminders (push notifications)
 
-Each phone turns them on with the "turn on reminders" line at the bottom of the sheet (iPhone: only after adding to the Home Screen). You get: a heads-up Saturday morning and Sunday evening if your duty is still open, a Monday note for the new week or anything late, an instant "you're up" when someone marks the bin full, and a note when a duty is handed to you.
+Each phone turns them on with the "turn on reminders" line at the bottom of the sheet (iPhone: only after adding to the Home Screen). You get exactly two kinds: Saturday morning if your chore is still open (due Sunday 21:00), and "you're up" when the bin has been marked full for a day and it's your turn.
 
 Set-up (once): `supabase login`, `supabase link --project-ref <ref>`, `supabase secrets set VAPID_PUBLIC_KEY=… VAPID_PRIVATE_KEY=… CRON_SECRET=…`, `supabase functions deploy push`, then run the cron block at the bottom of `schema.sql` in the SQL editor with the same CRON_SECRET. Generate VAPID keys with `npx web-push generate-vapid-keys`; the public one also goes in `config.js`.
 

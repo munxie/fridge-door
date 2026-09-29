@@ -1,5 +1,5 @@
 // Fridge Door push sender. Deployed as a Supabase Edge Function (no JWT check; auth is the house code or the cron secret).
-// Two callers: the app (kind "full" / "over", with x-house-code) and pg_cron every hour (kind "tick", with x-cron-secret).
+// Two callers: the app (kind "test", with x-house-code) and pg_cron every hour (kind "tick", with x-cron-secret).
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -60,32 +60,25 @@ function trashNext(docs: Docs) {
   return ORDER[(ORDER.indexOf(t[t.length - 1].by) + 1) % 3];
 }
 
-function scheduled(docs: Docs, now: Date, msgs: Msg[]) {
+function scheduled(docs: Docs, now: Date, msgs: Msg[], updates: { id: string; data: any }[]) {
   const { day, hour, wd } = local(now);
   const i = weekIndex(mondayOf(day, wd));
-  const due = (idx: number, text: string) => {
-    const a = assign(docs, idx);
-    DUTY_IDS.forEach((d) => { if (!done(docs, idx, d)) msgs.push({ to: a[d], title: DUTY_NAME[d] + " — " + text, body: "Tick it on the fridge when it’s done.", tag: "duty-" + d }); });
-  };
-  if (i >= 0 && wd === 5 && hour === 10) due(i, "due tomorrow 21:00");
-  if (i >= 0 && wd === 6 && hour === 18) due(i, "due tonight 21:00");
-  if (wd === 0 && hour === 10) {
-    if (i >= 1) {
-      const a = assign(docs, i - 1);
-      DUTY_IDS.forEach((d) => { if (!done(docs, i - 1, d)) msgs.push({ to: a[d], title: DUTY_NAME[d] + " from last week is still open", body: "It’s marked late on the sheet.", tag: "duty-" + d }); });
-    }
-    if (i >= 0) {
-      const a = assign(docs, i);
-      ORDER.forEach((p) => {
-        const mine = DUTY_IDS.filter((d) => a[d] === p).map((d) => DUTY_NAME[d]);
-        if (mine.length) msgs.push({ to: p, title: "New week: " + mine.join(" + "), body: "Due Sunday 21:00.", tag: "week" });
-      });
-    }
+  // 1. One day to go (Saturday 10:00) and the chore is still open → its assignee.
+  if (i >= 0 && wd === 5 && hour === 10) {
+    const a = assign(docs, i);
+    DUTY_IDS.forEach((d) => { if (!done(docs, i, d)) msgs.push({ to: a[d], title: DUTY_NAME[d] + " — due tomorrow 21:00", body: "Still open on the sheet.", tag: "duty-" + d }); });
   }
-  if (hour === 10) {
-    const full = (docs["trash/log"] || {}).full;
-    const next = trashNext(docs);
-    if (full && next && now.getTime() - new Date(full.at).getTime() > 20 * 3600e3) msgs.push({ to: next, title: "Trash: still full", body: "You’re up.", tag: "trash" });
+  // 2. Bin full for a day and it's your turn → once a day until someone takes it out.
+  const td = docs["trash/log"] || {};
+  const full = td.full;
+  const next = trashNext(docs);
+  if (full && next) {
+    const age = now.getTime() - new Date(full.at).getTime();
+    const since = full.nudgedAt ? now.getTime() - new Date(full.nudgedAt).getTime() : Infinity;
+    if (age >= 24 * 3600e3 && since >= 24 * 3600e3) {
+      msgs.push({ to: next, title: "Trash: you’re up", body: "The bin’s been full since " + (full.by && NAME[full.by] ? NAME[full.by] + " flagged it " : "") + "yesterday.", tag: "trash" });
+      updates.push({ id: "trash/log", data: { ...td, full: { ...full, nudgedAt: now.toISOString() } } });
+    }
   }
 }
 
@@ -107,24 +100,17 @@ Deno.serve(async (req) => {
   const subs = rows.filter((r: any) => r.id.startsWith("push/") && r.data && r.data.endpoint && NAME[r.data.by]);
 
   const msgs: Msg[] = [];
+  const updates: { id: string; data: any }[] = [];
   const now = new Date();
   if (body.kind === "tick") {
     if (!isCron) return json({ error: "cron only" }, 403);
-    scheduled(docs, now, msgs);
-  } else if (body.kind === "full") {
-    const by = NAME[body.by] ? body.by : null;
-    const next = trashNext(docs);
-    const to = next ? (next === by ? [] : [next]) : ORDER.filter((p) => p !== by);
-    to.forEach((p) => msgs.push({ to: p, title: "Trash: you’re up", body: (by ? NAME[by] : "Someone") + " says it’s full.", tag: "trash" }));
-  } else if (body.kind === "over") {
-    if (NAME[body.to] && NAME[body.by] && DUTY_NAME[body.duty] && body.to !== body.by) {
-      msgs.push({ to: body.to, title: NAME[body.by] + " handed you " + DUTY_NAME[body.duty], body: "Week of " + body.week + ". It’s on the sheet.", tag: "over" });
-    }
+    scheduled(docs, now, msgs, updates);
   } else if (body.kind === "test") {
-    if (NAME[body.to]) msgs.push({ to: body.to, title: "Reminders are on", body: "This is what they look like.", tag: "test" });
+    if (NAME[body.to]) msgs.push({ to: body.to, title: "Reminders are on", body: "You’ll hear from the fridge the day before a chore is due, or when the bin’s been full for a day and it’s your turn.", tag: "test" });
   } else {
     return json({ error: "unknown kind" }, 400);
   }
+  for (const u of updates) await db.from("docs").upsert({ id: u.id, data: u.data, updated_at: now.toISOString() });
 
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) return json({ error: "VAPID keys not set", planned: msgs.length }, 500);
   webpush.setVapidDetails(APP_URL, VAPID_PUBLIC, VAPID_PRIVATE);

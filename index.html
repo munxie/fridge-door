@@ -459,7 +459,6 @@ p { margin: 0; }
     var parts = key.split(':'), id = 'weeks/' + parts[0], d = parts[1], doc = clone(docs[id]); doc.over = doc.over || {};
     if (p) { doc.over[d] = { to: p, by: me }; } else { delete doc.over[d]; }
     docs[id] = doc; ui.reassign = null; render(); write(id, doc);
-    if (p && p !== me) { notify({ kind: 'over', to: p, duty: d, week: parts[0] }); }
   }
   function tookOut() {
     var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || [];
@@ -472,7 +471,7 @@ p { margin: 0; }
     if (!doc.turns.length || doc.turns[doc.turns.length - 1].by !== me) { return; }
     doc.turns.pop(); docs[id] = doc; render(); write(id, doc);
   }
-  function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); notify({ kind: 'full' }); }
+  function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
   function mark(roomId, e) {
     var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
     Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });
