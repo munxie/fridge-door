@@ -129,15 +129,19 @@ p { margin: 0; }
 .tally svg { display: block; width: 44px; height: 12px; overflow: visible; }
 .tally svg path { fill: none; stroke-width: 2.2; stroke-linecap: round; }
 .rooms { display: flex; flex-direction: column; gap: 6px; }
-.room { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; min-height: 34px; }
+.room { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; min-height: 44px; }
 .room-name { font-size: 16px; letter-spacing: .04em; }
 .marks { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px 10px; }
 .mark { display: inline-flex; align-items: baseline; gap: 3px; transform: rotate(var(--tilt)); }
-.mark .e { font-size: 18px; line-height: 1; }
-.mark .by { font-size: 15px; line-height: 1; }
-.mark.q .e { font-family: var(--hand); color: var(--pen); font-size: 24px; }
-.mark button { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: baseline; gap: 3px; }
-.plus { width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed var(--pen); color: var(--pen); background: none; cursor: pointer; font-family: var(--hand); font-size: 22px; line-height: 1; padding: 0; }
+.mark .e { font-size: 22px; line-height: 1; }
+.mark .by { font-size: 16px; line-height: 1; }
+.mark.q .e { font-family: var(--hand); color: var(--pen); font-size: 28px; }
+.mark button { background: none; border: 0; padding: 6px 4px; margin: -6px -4px; cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: baseline; gap: 3px; }
+.plus { width: 40px; height: 40px; border-radius: 50%; border: 1.5px dashed var(--pen); color: var(--pen); background: none; cursor: pointer; font-family: var(--hand); font-size: 28px; line-height: 1; padding: 0; }
+.choice { width: 48px; height: 48px; border-radius: 50%; border: 1.5px dashed var(--pen); background: var(--paper); cursor: pointer; padding: 0; font-size: 26px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.choice.q { font-family: var(--hand); color: var(--pen); font-size: 34px; }
+.choice.x { border-style: solid; border-color: var(--rule); color: var(--ink-2); font: 400 22px/1 var(--type); width: 40px; height: 40px; }
+.choice:active { transform: scale(.94); }
 .wk { display: grid; grid-template-columns: 6.6rem minmax(0,1fr); gap: 4px 10px; align-items: baseline; font-size: 14px; padding: 5px 0; }
 .wk .d { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .wk .a { display: flex; flex-wrap: wrap; gap: 2px 14px; }
@@ -347,9 +351,9 @@ p { margin: 0; }
       });
       if (!my && canWrite) {
         if (ui.pick === id) {
-          h += '<span class="mark ' + pcls(me) + '"><button type="button" data-act="mark" data-room="' + id + '" data-e="👏"><span class="e">👏</span></button></span>'
-            + '<span class="mark q ' + pcls(me) + '"><button type="button" data-act="mark" data-room="' + id + '" data-e="?"><span class="e">?</span></button></span>'
-            + '<button type="button" class="lnk ' + pcls(me) + '" data-act="pick" data-room="" style="font-size:15px">×</button>';
+          h += '<button type="button" class="choice ' + pcls(me) + '" data-act="mark" data-room="' + id + '" data-e="👏" aria-label="Thanks">👏</button>'
+            + '<button type="button" class="choice q ' + pcls(me) + '" data-act="mark" data-room="' + id + '" data-e="?" aria-label="Who did this?">?</button>'
+            + '<button type="button" class="choice x" data-act="pick" data-room="" aria-label="Cancel">×</button>';
         } else {
           h += '<button type="button" class="plus ' + pcls(me) + '" data-act="pick" data-room="' + id + '" aria-label="Mark ' + r[1] + '">+</button>';
         }
@@ -471,7 +475,7 @@ p { margin: 0; }
     if (!doc.turns.length || doc.turns[doc.turns.length - 1].by !== me) { return; }
     doc.turns.pop(); docs[id] = doc; render(); write(id, doc);
   }
-  function binFull(on) { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = on === false ? null : { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
+  function binFull(on) { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = on === false ? null : { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); if (on !== false) { notify({ kind: 'full' }); } }
   function mark(roomId, e) {
     var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
     Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });

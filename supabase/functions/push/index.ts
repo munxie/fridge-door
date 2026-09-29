@@ -1,5 +1,5 @@
 // Fridge Door push sender. Deployed as a Supabase Edge Function (no JWT check; auth is the house code or the cron secret).
-// Two callers: the app (kind "test", with x-house-code) and pg_cron every hour (kind "tick", with x-cron-secret).
+// Two callers: the app (kind "full" | "test", with x-house-code) and pg_cron every hour (kind "tick", with x-cron-secret).
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -105,6 +105,12 @@ Deno.serve(async (req) => {
   if (body.kind === "tick") {
     if (!isCron) return json({ error: "cron only" }, 403);
     scheduled(docs, now, msgs, updates);
+  } else if (body.kind === "full") {
+    // Someone just flagged the bin: tell whoever is next, right away (unless that's the flagger).
+    const by = NAME[body.by] ? body.by : null;
+    const next = trashNext(docs);
+    const to = next ? (next === by ? [] : [next]) : ORDER.filter((p) => p !== by);
+    to.forEach((p) => msgs.push({ to: p, title: "Trash: you’re up", body: (by ? NAME[by] : "Someone") + " says the bin’s full.", tag: "trash" }));
   } else if (body.kind === "test") {
     if (NAME[body.to]) msgs.push({ to: body.to, title: "Reminders are on", body: "You’ll hear from the fridge the day before a chore is due, or when the bin’s been full for a day and it’s your turn.", tag: "test" });
   } else {
