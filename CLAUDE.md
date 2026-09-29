@@ -6,7 +6,7 @@ Shared-house chore sheet for three housemates (Theo, Andrei, Maria), styled as a
 - `index.html` — the whole app (CSS + JS inline). Constants at the top of the script: `ANCHOR` (Mon 5 Oct 2026 = week 1), `ORDER`, `NAME`, `DUTIES`, `ROTA` (3-week cycle, two duties per week, one person off), `ROOMS`, `QUIPS`.
 - `config.js` — Supabase project URL + publishable key (safe to commit).
 - `schema.sql` — table `docs(id text pk, data jsonb, updated_at)`, RLS policies, `house_ok()` which checks the `x-house-code` request header. The house code itself lives only in that function in Supabase, never in this repo.
-- `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png` — PWA shell.
+- `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `badge.png` (white silhouette for Android's status bar) — PWA shell. Icons are rendered by a PIL script, not hand-drawn; regenerate all sizes together.
 - `supabase/functions/push/index.ts` — Edge Function that sends web push. Called by the app (`kind: test`, auth = `x-house-code`) and by pg_cron hourly (`kind: tick`, auth = `x-cron-secret`). Duplicates ANCHOR/ORDER/ROTA; keep in sync with index.html. Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET. Deploy: `supabase functions deploy push` (verify_jwt off in supabase/config.toml).
 - `README.md` — setup and usage.
 

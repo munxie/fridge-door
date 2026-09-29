@@ -1,6 +1,6 @@
 // Fridge Door service worker: keeps the app shell available offline; data always comes from the network.
-var CACHE = 'fridge-v4';
-var SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+var CACHE = 'fridge-v5';
+var SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './badge.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
@@ -26,7 +26,7 @@ self.addEventListener('push', function (e) {
   var d = {};
   try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Fridge Door', {
-    body: d.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: d.tag || 'fridge', renotify: true, data: { url: d.url || './' }
+    body: d.body || '', icon: './icon-512.png', badge: './badge.png', tag: d.tag || 'fridge', renotify: true, data: { url: d.url || './' }
   }));
 });
 self.addEventListener('notificationclick', function (e) {

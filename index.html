@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Fridge">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -323,7 +323,7 @@ p { margin: 0; }
     var next = trashNext(), td = trashDoc() || {}, full = td.full, turns = td.turns || [], lastMine = turns.length > 0 && turns[turns.length - 1].by === me;
     h += '<section><div class="turn"><span class="lbl">Trash</span>';
     if (!next) { h += '<span>nobody yet</span>'; } else if (next === me) { h += hand(me, 'you’re up', 'hand-lg'); } else { h += '<span>next:</span>' + hand(next, NAME[next], 'hand-lg'); }
-    if (full) { h += hand(full.by, 'full!', 'hand-md'); }
+    if (full) { h += canWrite ? '<button type="button" class="lnk ' + pcls(full.by) + '" data-act="unfull" style="text-decoration:none;font-size:19px">full!</button>' : hand(full.by, 'full!', 'hand-md'); }
     h += '</div><div class="row">';
     if (lastMine) { h += hand(me, 'you took it', 'hand-md') + '<button type="button" class="lnk ' + pcls(me) + '" data-act="untrash"' + (canWrite ? '' : ' disabled') + '>take it back</button>'; }
     else { h += '<button type="button" class="pen ' + pcls(me) + '" data-act="trash"' + (canWrite ? '' : ' disabled') + '>took it out →</button>'; }
@@ -471,7 +471,7 @@ p { margin: 0; }
     if (!doc.turns.length || doc.turns[doc.turns.length - 1].by !== me) { return; }
     doc.turns.pop(); docs[id] = doc; render(); write(id, doc);
   }
-  function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
+  function binFull(on) { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = on === false ? null : { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
   function mark(roomId, e) {
     var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
     Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });
@@ -544,6 +544,7 @@ p { margin: 0; }
     else if (act === 'trash') { tookOut(); }
     else if (act === 'untrash') { takeBack(); }
     else if (act === 'full') { binFull(); }
+    else if (act === 'unfull') { binFull(false); }
     else if (act === 'pick') { ui.pick = b.dataset.room || null; render(); }
     else if (act === 'mark') { mark(b.dataset.room, b.dataset.e); }
     else if (act === 'unmark') { mark(b.dataset.room, null); }
