@@ -30,9 +30,11 @@ Open the URL → type the house code → tap your name. Then add it to the home 
 - Phones stay in sync through a Supabase realtime broadcast: when one phone saves, the others refetch. They also refetch when the app comes to the foreground and once a minute while open.
 - Room marks expire after 3 days. The trash log keeps the last 60 take-outs; tallies count the current month.
 
-## Push notifications (not included)
+## Reminders (push notifications)
 
-A web app can only show notifications through a server that sends them. Adding that means a Supabase Edge Function plus a scheduled job (pg_cron) and web-push keys, roughly an evening. The app is structured so nothing needs to change on the phones except granting permission when the time comes.
+Each phone turns them on with the "turn on reminders" line at the bottom of the sheet (iPhone: only after adding to the Home Screen). You get: a heads-up Saturday morning and Sunday evening if your duty is still open, a Monday note for the new week or anything late, an instant "you're up" when someone marks the bin full, and a note when a duty is handed to you.
+
+Set-up (once): `supabase login`, `supabase link --project-ref <ref>`, `supabase secrets set VAPID_PUBLIC_KEY=… VAPID_PRIVATE_KEY=… CRON_SECRET=…`, `supabase functions deploy push`, then run the cron block at the bottom of `schema.sql` in the SQL editor with the same CRON_SECRET. Generate VAPID keys with `npx web-push generate-vapid-keys`; the public one also goes in `config.js`.
 
 ## Free tier limits
 

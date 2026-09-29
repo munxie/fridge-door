@@ -148,6 +148,9 @@ p { margin: 0; }
 .streaks { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
 .streaks .hand { font-size: 20px; line-height: 1; }
 .status { margin-top: 14px; font-size: 12px; color: var(--ink-2); min-height: 1em; }
+.bell { margin-top: 18px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.bell button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; border-bottom: 1.5px solid var(--ink); }
+.bell button:disabled { opacity: .5; cursor: default; }
 .off-sheet { margin-top: 18px; text-align: center; font-size: 12px; color: var(--fridge-fg); }
 .whoami { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
 .who { font-family: var(--hand); color: var(--pen); font-size: 30px; line-height: 1; background: none; border: 0; padding: 10px 6px; text-align: left; cursor: pointer; border-bottom: 1.5px dashed var(--rule); }
@@ -214,6 +217,10 @@ p { margin: 0; }
   var connected = false, wrongCode = false, loaded = false;
   var ui = { pick: null, reassign: null, fresh: null, status: '', open: null };
   var chains = {};
+  var PUSH_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  var push = { state: PUSH_OK ? 'off' : 'unsupported', busy: false };
+  var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
   try { me = localStorage.getItem('fd-me'); if (!NAME[me]) { me = null; } } catch (e) {}
   try { code = localStorage.getItem('fd-code') || null; } catch (e) {}
@@ -351,6 +358,7 @@ p { margin: 0; }
     });
     h += '</div></section>';
 
+    h += bellLine(canWrite);
     h += '<div class="more">' + [['next', 'coming up'], ['daily', 'every day'], ['streaks', 'streaks']].map(function (x) { return '<button type="button" class="tab' + (ui.open === x[0] ? ' on' : '') + '" data-act="open" data-o="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
 
     if (ui.open === 'next') {
@@ -385,6 +393,15 @@ p { margin: 0; }
     app.innerHTML = h;
   }
 
+  function bellLine(canWrite) {
+    if (!cfg.vapidKey) { return ''; }
+    if (push.state === 'unsupported') { return isIOS && !standalone ? '<p class="bell">Reminders: add to Home Screen first.</p>' : ''; }
+    if (push.state === 'blocked') { return '<p class="bell">Reminders blocked in phone settings.</p>'; }
+    var dis = (!canWrite || push.busy) ? ' disabled' : '';
+    if (push.state === 'on') { return '<p class="bell">Reminders on · <button type="button" data-act="pushoff"' + dis + '>turn off</button></p>'; }
+    return '<p class="bell"><button type="button" data-act="pushon"' + dis + '>turn on reminders</button></p>';
+  }
+
   function dutyLine(i, d, x, canWrite, now, mine) {
     var rec = doneRec(i, d), key = ymd(weekStart(i)) + ':' + d, isLate = !rec && now > deadline(i), cur = weekIndex(now);
     var canTick = canWrite && (mine || (rec && rec.by === me));
@@ -415,6 +432,7 @@ p { margin: 0; }
       res.data.forEach(function (r) { if (r.id === '_house') { seenHouse = true; } else { next[r.id] = r.data || {}; } });
       if (!seenHouse) { wrongCode = true; connected = false; try { localStorage.removeItem('fd-code'); } catch (e) {} render(); return; }
       docs = next; connected = true; loaded = true; wrongCode = false; setStatus(''); render();
+      if (!loadAll.checked) { loadAll.checked = true; pushCheck(); }
     });
   }
   function write(id, data) {
@@ -441,6 +459,7 @@ p { margin: 0; }
     var parts = key.split(':'), id = 'weeks/' + parts[0], d = parts[1], doc = clone(docs[id]); doc.over = doc.over || {};
     if (p) { doc.over[d] = { to: p, by: me }; } else { delete doc.over[d]; }
     docs[id] = doc; ui.reassign = null; render(); write(id, doc);
+    if (p && p !== me) { notify({ kind: 'over', to: p, duty: d, week: parts[0] }); }
   }
   function tookOut() {
     var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || [];
@@ -453,7 +472,7 @@ p { margin: 0; }
     if (!doc.turns.length || doc.turns[doc.turns.length - 1].by !== me) { return; }
     doc.turns.pop(); docs[id] = doc; render(); write(id, doc);
   }
-  function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
+  function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); notify({ kind: 'full' }); }
   function mark(roomId, e) {
     var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
     Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });
@@ -468,6 +487,39 @@ p { margin: 0; }
       window.confetti({ particleCount: 110, spread: 75, startVelocity: 38, origin: { y: .6 }, colors: colors, scalar: .95 });
       setTimeout(function () { window.confetti({ particleCount: 60, spread: 110, startVelocity: 28, origin: { y: .55 }, colors: colors, scalar: .8 }); }, 180);
     } else { window.confetti({ particleCount: 40, spread: 60, startVelocity: 25, origin: { y: .7 }, colors: colors, scalar: .8 }); }
+  }
+
+  /* ---------- push reminders ---------- */
+  function notify(payload) {
+    if (!code || !cfg.url) { return; }
+    payload.by = me;
+    try { fetch(cfg.url + '/functions/v1/push', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-house-code': code, 'apikey': cfg.anonKey }, body: JSON.stringify(payload) }).catch(function () {}); } catch (e) {}
+  }
+  function b64u(s) { var b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) { a[i] = b.charCodeAt(i); } return a; }
+  function pushRow(sub) { var j = sub.toJSON(); return { id: 'push/' + hash(j.endpoint), data: { endpoint: j.endpoint, keys: j.keys, by: me, ua: navigator.userAgent.slice(0, 80), at: new Date().toISOString() } }; }
+  function pushCheck() {
+    if (!PUSH_OK) { return; }
+    navigator.serviceWorker.ready.then(function (r) { return r.pushManager.getSubscription(); }).then(function (sub) {
+      push.state = sub ? 'on' : (Notification.permission === 'denied' ? 'blocked' : 'off');
+      if (sub && me && connected) { var row = pushRow(sub); var cur = docs[row.id]; if (!cur || cur.by !== me) { docs[row.id] = row.data; write(row.id, row.data); } }
+      render();
+    }).catch(function () {});
+  }
+  function pushOn() {
+    push.busy = true; render();
+    Notification.requestPermission().then(function (p) {
+      if (p !== 'granted') { push.state = 'blocked'; return; }
+      return navigator.serviceWorker.ready.then(function (r) { return r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(cfg.vapidKey) }); })
+        .then(function (sub) { var row = pushRow(sub); docs[row.id] = row.data; write(row.id, row.data); push.state = 'on'; setTimeout(function () { notify({ kind: 'test', to: me }); }, 1500); });
+    }).catch(function (e) { setStatus('Reminders didn’t start: ' + (e && e.message || e)); }).then(function () { push.busy = false; render(); });
+  }
+  function pushOff() {
+    push.busy = true; render();
+    navigator.serviceWorker.ready.then(function (r) { return r.pushManager.getSubscription(); }).then(function (sub) {
+      if (!sub) { return; }
+      var row = pushRow(sub); docs[row.id] = {}; write(row.id, {});
+      return sub.unsubscribe();
+    }).catch(function () {}).then(function () { push.state = 'off'; push.busy = false; render(); });
   }
 
   /* ---------- events ---------- */
@@ -485,7 +537,7 @@ p { margin: 0; }
     var b = e.target.closest('[data-act]');
     if (!b || b.disabled) { return; }
     var act = b.dataset.act;
-    if (act === 'me') { me = b.dataset.p; try { localStorage.setItem('fd-me', me); } catch (x) {} render(); return; }
+    if (act === 'me') { me = b.dataset.p; try { localStorage.setItem('fd-me', me); } catch (x) {} render(); pushCheck(); return; }
     if (act === 'unme') { me = null; try { localStorage.removeItem('fd-me'); } catch (x) {} render(); return; }
     if (act === 'open') { ui.open = ui.open === b.dataset.o ? null : b.dataset.o; ui.reassign = null; render(); return; }
     if (!connected) { return; }
@@ -498,15 +550,15 @@ p { margin: 0; }
     else if (act === 'unmark') { mark(b.dataset.room, null); }
     else if (act === 'reassign') { ui.reassign = b.dataset.k || null; render(); }
     else if (act === 'setover') { setOver(b.dataset.k, b.dataset.p); }
+    else if (act === 'pushon') { pushOn(); }
+    else if (act === 'pushoff') { pushOff(); }
   });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && sb) { loadAll(); } });
   setInterval(function () { if (sb && !document.hidden && !ui.pick && !ui.reassign) { loadAll(); } }, 60 * 1000);
 
   /* ---------- boot ---------- */
-  var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
   if (!standalone) {
-    var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    document.getElementById('foot').textContent = ios ? 'Add to Home Screen for the app: Share → Add to Home Screen.' : 'Install it: browser menu → Add to Home screen.';
+    document.getElementById('foot').textContent = isIOS ? 'Add to Home Screen for the app: Share → Add to Home Screen.' : 'Install it: browser menu → Add to Home screen.';
   } else if (cfg.pactUrl) { document.getElementById('foot').innerHTML = '<a href="' + esc(cfg.pactUrl) + '" target="_blank" rel="noopener" style="color:inherit">The agreement behind the sheet</a>'; }
   render();
   if (code) { connect(); }
