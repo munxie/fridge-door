@@ -398,7 +398,7 @@ p { margin: 0; }
     if (push.state === 'unsupported') { return isIOS && !standalone ? '<p class="bell">Reminders: add to Home Screen first.</p>' : ''; }
     if (push.state === 'blocked') { return '<p class="bell">Reminders blocked in phone settings.</p>'; }
     var dis = (!canWrite || push.busy) ? ' disabled' : '';
-    if (push.state === 'on') { return '<p class="bell">Reminders on · <button type="button" data-act="pushoff"' + dis + '>turn off</button></p>'; }
+    if (push.state === 'on') { return ''; }
     return '<p class="bell"><button type="button" data-act="pushon"' + dis + '>turn on reminders</button></p>';
   }
 

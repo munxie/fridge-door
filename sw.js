@@ -1,5 +1,5 @@
 // Fridge Door service worker: keeps the app shell available offline; data always comes from the network.
-var CACHE = 'fridge-v3';
+var CACHE = 'fridge-v4';
 var SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
