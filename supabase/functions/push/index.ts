@@ -34,12 +34,12 @@ function json(o: unknown, status = 200) {
 
 // Local (Amsterdam) calendar facts for "now".
 function local(d: Date) {
-  const f = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", weekday: "short", hour12: false });
+  const f = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", weekday: "short", hour12: false });
   const p: Record<string, string> = {};
   f.formatToParts(d).forEach((x) => { p[x.type] = x.value; });
   const day = Date.UTC(+p.year, +p.month - 1, +p.day);
   const wd = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(p.weekday);
-  return { day, hour: +p.hour % 24, wd };
+  return { day, hour: +p.hour % 24, minute: +p.minute, wd };
 }
 const pad = (n: number) => (n < 10 ? "0" : "") + n;
 function ymd(utcDay: number) { const d = new Date(utcDay); return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()); }
@@ -61,12 +61,19 @@ function trashNext(docs: Docs) {
 }
 
 function scheduled(docs: Docs, now: Date, msgs: Msg[], updates: { id: string; data: any }[]) {
-  const { day, hour, wd } = local(now);
+  const { day, hour, minute, wd } = local(now);
   const i = weekIndex(mondayOf(day, wd));
+  // The cron fires every 5 minutes; timed reminders only go on the first run of their hour.
+  const onTheHour = minute < 5;
   // 1. One day to go (Saturday 10:00) and the chore is still open → its assignee.
-  if (i >= 0 && wd === 5 && hour === 10) {
+  if (i >= 0 && wd === 5 && hour === 10 && onTheHour) {
     const a = assign(docs, i);
     DUTY_IDS.forEach((d) => { if (!done(docs, i, d)) msgs.push({ to: a[d], title: DUTY_NAME[d] + " — due tomorrow 21:00", body: "Still open on the sheet.", tag: "duty-" + d }); });
+  }
+  // 1b. Monday 10:00: last week's chore still open → its assignee (it's stamped late on the sheet).
+  if (i >= 1 && wd === 0 && hour === 10 && onTheHour) {
+    const a = assign(docs, i - 1);
+    DUTY_IDS.forEach((d) => { if (!done(docs, i - 1, d)) msgs.push({ to: a[d], title: DUTY_NAME[d] + " from last week is still open", body: "It’s stamped late on the sheet.", tag: "duty-" + d }); });
   }
   // 2. Bin flagged full → next person, once it has been full for 5 min (so a mis-tap can be undone),
   //    then again once a day while it stays full.

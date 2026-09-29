@@ -118,8 +118,10 @@ p { margin: 0; }
 .lnk:disabled { opacity: .45; cursor: default; text-decoration: none; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
 .more { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 26px; padding-top: 8px; border-top: 1px solid var(--rule); }
-.tab { font: 400 13px/1.4 var(--type); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: none; border: 0; padding: 4px 0; cursor: pointer; border-bottom: 1.5px solid transparent; }
-.tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.tab { font: 400 13px/1.4 var(--type); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); background: none; border: 0; padding: 6px 0; cursor: pointer; border-bottom: 1.5px dashed var(--rule); }
+.tab::after { content: ' \25BE'; font-size: 11px; }
+.tab.on { color: var(--ink); border-bottom: 1.5px solid var(--ink); }
+.tab.on::after { content: ' \25B4'; }
 .chooser { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-top: 6px; }
 .turn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 17px; }
 .turn .hand-lg { font-size: 26px; }
@@ -225,6 +227,7 @@ p { margin: 0; }
   var push = { state: PUSH_OK ? 'off' : 'unsupported', busy: false };
   var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
   var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  var isPhone = isIOS || /Android/.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
   try { me = localStorage.getItem('fd-me'); if (!NAME[me]) { me = null; } } catch (e) {}
   try { code = localStorage.getItem('fd-code') || null; } catch (e) {}
@@ -398,7 +401,7 @@ p { margin: 0; }
   }
 
   function bellLine(canWrite) {
-    if (!cfg.vapidKey) { return ''; }
+    if (!cfg.vapidKey || !isPhone) { return ''; }
     if (push.state === 'unsupported') { return isIOS && !standalone ? '<p class="bell">Reminders: add to Home Screen first.</p>' : ''; }
     if (push.state === 'blocked') { return '<p class="bell">Reminders blocked in phone settings.</p>'; }
     var dis = (!canWrite || push.busy) ? ' disabled' : '';
@@ -415,6 +418,7 @@ p { margin: 0; }
       + '<span class="assignee">' + (mine ? '' : (x.by ? '<span class="was ' + pcls(x.by) + '">' + NAME[x.printed] + '</span> ' + hand(x.by, NAME[x.person], '') : NAME[x.person])) + '</span>' + (isLate ? '<span class="stamp">late</span>' : '') + '</div>';
     if (rec) { h += '<div class="done-note">' + hand(rec.by, QUIPS[d][rec.q || 0] + (mine ? '' : ' — ' + NAME[rec.by]), 'hand-md') + '</div>'; }
     else if (mine) { h += '<ul class="detail">' + DUTIES[d].detail.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul>'; }
+    else if (canWrite) { h += '<div class="row" style="margin-top:4px"><button type="button" class="lnk ' + pcls(me) + '" data-act="claim" data-k="' + key + '">I did it</button></div>'; }
     if (i !== cur && cur >= 0) { h += '<p class="small">from ' + rangeText(i) + '</p>'; }
     h += '</div></div>';
     return h;
@@ -459,6 +463,13 @@ p { margin: 0; }
     else { doc.done[d] = { by: me, at: new Date().toISOString(), q: Math.floor(Math.random() * QUIPS[d].length) }; ui.fresh = key; celebrate(true); }
     docs[id] = doc; render(); write(id, doc);
   }
+  function claim(key, el) {
+    var parts = key.split(':'), id = 'weeks/' + parts[0], d = parts[1], doc = clone(docs[id]);
+    doc.over = doc.over || {}; doc.done = doc.done || {};
+    doc.over[d] = { to: me, by: me };
+    doc.done[d] = { by: me, at: new Date().toISOString(), q: Math.floor(Math.random() * QUIPS[d].length) };
+    ui.fresh = key; celebrate(true, el); docs[id] = doc; render(); write(id, doc);
+  }
   function setOver(key, p) {
     var parts = key.split(':'), id = 'weeks/' + parts[0], d = parts[1], doc = clone(docs[id]); doc.over = doc.over || {};
     if (p) { doc.over[d] = { to: p, by: me }; } else { delete doc.over[d]; }
@@ -482,7 +493,7 @@ p { margin: 0; }
     if (e) { doc.marks[me] = { e: e, at: new Date().toISOString() }; } else { delete doc.marks[me]; }
     docs[id] = doc; ui.pick = null; render(); write(id, doc);
   }
-  function celebrate(big) {
+  function celebrate(big, el) {
     if (typeof window.confetti !== 'function') { return; }
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
     var colors = ['#2C7A4B', '#8A6800', '#B5342B', '#D9A621', '#F8F4E8'];
@@ -549,6 +560,7 @@ p { margin: 0; }
     else if (act === 'untrash') { takeBack(); }
     else if (act === 'full') { binFull(); }
     else if (act === 'unfull') { binFull(false); }
+    else if (act === 'claim') { claim(b.dataset.k, b); }
     else if (act === 'pick') { ui.pick = b.dataset.room || null; render(); }
     else if (act === 'mark') { mark(b.dataset.room, b.dataset.e); }
     else if (act === 'unmark') { mark(b.dataset.room, null); }

@@ -32,10 +32,10 @@ Open the URL → type the house code → tap your name. Then add it to the home 
 
 ## Reminders (push notifications)
 
-Each phone turns them on with the "turn on reminders" line at the bottom of the sheet (iPhone: only after adding to the Home Screen). You get: "you're up" about 5 minutes after someone marks the bin full and it's your turn (and again daily if it stays full), and a Saturday-morning note if your chore is still open (due Sunday 21:00).
+Each phone turns them on with the "turn on reminders" line at the bottom of the sheet (iPhone: only after adding to the Home Screen). You get: "you're up" about 5 minutes after someone marks the bin full and it's your turn (and again daily if it stays full), a Saturday-morning note if your chore is still open (due Sunday 21:00), and a Monday note if last week's is still open.
 
 Set-up (once): `supabase login`, `supabase link --project-ref <ref>`, `supabase secrets set VAPID_PUBLIC_KEY=… VAPID_PRIVATE_KEY=… CRON_SECRET=…`, `supabase functions deploy push`, then run the cron block at the bottom of `schema.sql` in the SQL editor with the same CRON_SECRET. Generate VAPID keys with `npx web-push generate-vapid-keys`; the public one also goes in `config.js`.
 
 ## Free tier limits
 
-Supabase pauses free projects after 7 days without any request. Three phones polling once a minute while open keeps it alive; if it ever pauses, the dashboard has a one-click Restore.
+Supabase pauses free projects after 7 days without any request. The reminders job hits the database every 5 minutes, which keeps it awake on its own; if it ever pauses anyway, the dashboard has a one-click Restore.

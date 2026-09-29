@@ -18,10 +18,12 @@ Shared-house chore sheet for three housemates (Theo, Andrei, Maria), styled as a
 - `push/<hash(endpoint)>`: `{endpoint, keys, by, ua, at}` one per phone that turned reminders on; `{}` when turned off. The function deletes rows the push service rejects.
 
 ## Sync
+- "I did it" on someone else's open duty = handover to me + tick in one write (`over[d]={to:me,by:me}` and `done[d]`).
+
 Writes are upserts via supabase-js; a realtime broadcast on channel `house-<hash(code)>` tells other phones to refetch. Also refetches on visibilitychange and every 60 s.
 
 ## Reminders
-Decided inside the function in Europe/Amsterdam time; pg_cron fires it every 5 minutes. (1) Saturday 10:00: an open duty goes to its assignee ("due tomorrow 21:00"). (2) `trash/log.full` at least 5 min old (so a mis-tap can be undone) → next person gets "you're up"; the function stamps `full.nudgedAt` and repeats once a day while it stays full. Turning reminders on sends one test push (`kind: test`).
+Decided inside the function in Europe/Amsterdam time; pg_cron fires it every 5 minutes. (1) Saturday 10:00: an open duty goes to its assignee ("due tomorrow 21:00"); Monday 10:00: last week's still-open duty ("still open"). Timed ones only fire on the first tick of the hour (minute < 5). (2) `trash/log.full` at least 5 min old (so a mis-tap can be undone) → next person gets "you're up"; the function stamps `full.nudgedAt` and repeats once a day while it stays full. Turning reminders on sends one test push (`kind: test`).
 
 ## Hosting
 Static; GitHub Pages from `main` root. Supabase project: qxblhbnxadztoksjhtes (already set up, schema applied).
