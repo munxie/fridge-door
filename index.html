@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <title>Fridge Door</title>
 <meta name="theme-color" content="#E3E5E1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#2A2D2B" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Fridge">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -42,8 +43,10 @@ body {
   background: var(--fridge);
   background-image: linear-gradient(90deg, var(--fridge-2), var(--fridge) 18%, var(--fridge) 82%, var(--fridge-2));
   color: var(--ink); font-family: var(--type); font-size: 16px; line-height: 1.45;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none; touch-action: manipulation; overscroll-behavior-y: none;
 }
+.field { -webkit-user-select: text; user-select: text; }
 .door { max-width: 470px; margin: 0 auto; padding-inline: 16px; padding-block: 36px 40px; }
 .hold { position: relative; }
 .sheet {
@@ -61,11 +64,6 @@ body {
   box-shadow: 0 3px 6px rgba(0,0,0,.35), inset 0 -2px 3px rgba(0,0,0,.25); z-index: 2;
 }
 .magnet.gold { background: radial-gradient(circle at 35% 30%, #FFE9A3, #D9A621 45%, #8A6410 100%); }
-.ring {
-  position: absolute; right: 18px; bottom: 120px; width: 112px; height: 112px; border-radius: 50%;
-  border: 9px solid rgba(120,78,28,.12); box-shadow: inset 0 0 0 2px rgba(120,78,28,.06);
-  transform: rotate(-12deg) scaleX(1.04); filter: blur(.5px); pointer-events: none;
-}
 h1 { font: 400 1.25rem/1.2 var(--type); letter-spacing: .08em; text-transform: uppercase; margin: 0; }
 .big { font-size: 22px; letter-spacing: .04em; }
 .lbl { letter-spacing: .08em; text-transform: uppercase; font-size: 14px; }
@@ -166,7 +164,6 @@ p { margin: 0; }
   <div class="hold">
     <div class="sheet">
       <div id="app"></div>
-      <div class="ring" aria-hidden="true"></div>
     </div>
     <div class="magnet" id="magnet"></div>
   </div>
@@ -215,7 +212,7 @@ p { margin: 0; }
   var me = null, code = null;
   var docs = {};          // id -> data   ('weeks/2026-10-05', 'trash/log', 'rooms/kitchen')
   var connected = false, wrongCode = false, loaded = false;
-  var ui = { pick: null, confirmQ: null, reassign: null, fresh: null, status: '', open: null };
+  var ui = { pick: null, reassign: null, fresh: null, status: '', open: null };
   var chains = {};
 
   try { me = localStorage.getItem('fd-me'); if (!NAME[me]) { me = null; } } catch (e) {}
@@ -316,12 +313,14 @@ p { margin: 0; }
     if (!pre && t >= 1) { var pa = assign(t - 1); DUTY_IDS.forEach(function (d) { if (pa[d].person === me && !doneRec(t - 1, d)) { h += dutyLine(t - 1, d, pa[d], canWrite, now, true); } }); }
     h += '</div></section>';
 
-    var next = trashNext(), td = trashDoc() || {}, full = td.full;
+    var next = trashNext(), td = trashDoc() || {}, full = td.full, turns = td.turns || [], lastMine = turns.length > 0 && turns[turns.length - 1].by === me;
     h += '<section><div class="turn"><span class="lbl">Trash</span>';
     if (!next) { h += '<span>nobody yet</span>'; } else if (next === me) { h += hand(me, 'you’re up', 'hand-lg'); } else { h += '<span>next:</span>' + hand(next, NAME[next], 'hand-lg'); }
     if (full) { h += hand(full.by, 'full!', 'hand-md'); }
-    h += '</div><div class="row"><button type="button" class="pen ' + pcls(me) + '" data-act="trash"' + (canWrite ? '' : ' disabled') + '>took it out →</button>'
-      + (full || !canWrite ? '' : '<button type="button" class="lnk ' + pcls(me) + '" data-act="full">full</button>') + '</div>';
+    h += '</div><div class="row">';
+    if (lastMine) { h += hand(me, 'you took it', 'hand-md') + '<button type="button" class="lnk ' + pcls(me) + '" data-act="untrash"' + (canWrite ? '' : ' disabled') + '>take it back</button>'; }
+    else { h += '<button type="button" class="pen ' + pcls(me) + '" data-act="trash"' + (canWrite ? '' : ' disabled') + '>took it out →</button>'; }
+    h += (full || !canWrite ? '' : '<button type="button" class="lnk ' + pcls(me) + '" data-act="full">full</button>') + '</div>';
     var tc = trashCounts();
     h += '<div class="tallies">' + ORDER.map(function (p) { return '<div class="tally ' + pcls(p) + '"><span class="nm">' + NAME[p] + '</span>' + tallySvg(tc[p], 'var(--pen)', p + now.getMonth()) + '</div>'; }).join('') + '</div></section>';
 
@@ -342,10 +341,8 @@ p { margin: 0; }
       if (!my && canWrite) {
         if (ui.pick === id) {
           h += '<span class="mark ' + pcls(me) + '"><button type="button" data-act="mark" data-room="' + id + '" data-e="👏"><span class="e">👏</span></button></span>'
-            + '<span class="mark q ' + pcls(me) + '"><button type="button" data-act="askq" data-room="' + id + '"><span class="e">?</span></button></span>'
+            + '<span class="mark q ' + pcls(me) + '"><button type="button" data-act="mark" data-room="' + id + '" data-e="?"><span class="e">?</span></button></span>'
             + '<button type="button" class="lnk ' + pcls(me) + '" data-act="pick" data-room="" style="font-size:15px">×</button>';
-        } else if (ui.confirmQ === id) {
-          h += '<span class="small">3 days. sure?</span><button type="button" class="lnk ' + pcls(me) + '" data-act="mark" data-room="' + id + '" data-e="?">yes</button><button type="button" class="lnk ' + pcls(me) + '" data-act="pick" data-room="">no</button>';
         } else {
           h += '<button type="button" class="plus ' + pcls(me) + '" data-act="pick" data-room="' + id + '" aria-label="Mark ' + r[1] + '">+</button>';
         }
@@ -358,7 +355,7 @@ p { margin: 0; }
 
     if (ui.open === 'next') {
       h += '<section class="sub-sec">';
-      for (var i = t + 1; i <= t + 4; i++) {
+      for (var i = t; i <= t + 4; i++) {
         var ai = assign(i);
         h += '<div class="wk"><span class="d">' + rangeText(i) + '</span><span class="a">';
         DUTY_IDS.forEach(function (d) {
@@ -378,7 +375,7 @@ p { margin: 0; }
       h += '<p class="small">Tap a name to rewrite it.</p></section>';
     }
     if (ui.open === 'daily') {
-      h += '<section class="sub-sec"><ol class="rules"><li>Cooked or ate: stove and counter wiped, scraps binned, your dishes done before bed.</li><li>Cooked for the house: the eaters clean.</li><li>Bin full: out it goes, new bag in, tap the button.</li><li>Not sure whose mess: ask in the chat.</li><li>Weekly duties due Sunday 21:00.</li></ol></section>';
+      h += '<section class="sub-sec"><ol class="rules"><li>Cooked or ate: stove and counter wiped, scraps binned, your dishes done before bed.</li><li>Cooked for the house: the eaters clean.</li><li>Bin full: out it goes, new bag in, tap the button.</li><li>Not sure whose mess: ask in the chat.</li><li>Rooms: 👏 = thanks, ? = who did this. Marks fade after 3 days.</li><li>Weekly duties due Sunday 21:00.</li></ol></section>';
     }
     if (ui.open === 'streaks') {
       h += '<section class="sub-sec"><div class="streaks">' + ORDER.map(function (p) { return '<span>' + NAME[p] + ' ' + hand(p, st[p] + ' wk' + (st[p] === 1 ? '' : 's'), '') + '</span>'; }).join('')
@@ -390,8 +387,9 @@ p { margin: 0; }
 
   function dutyLine(i, d, x, canWrite, now, mine) {
     var rec = doneRec(i, d), key = ymd(weekStart(i)) + ':' + d, isLate = !rec && now > deadline(i), cur = weekIndex(now);
+    var canTick = canWrite && (mine || (rec && rec.by === me));
     var h = '<div class="duty' + (mine ? ' is-mine' : '') + '">';
-    h += '<button type="button" class="box' + (ui.fresh === key ? ' fresh' : '') + '" data-act="tick" data-k="' + key + '" aria-pressed="' + !!rec + '" aria-label="' + DUTIES[d].name + (rec ? ', done' : '') + '"' + (canWrite ? '' : ' disabled') + '>' + (rec ? tickSvg(key + rec.at, 'var(--pen-' + rec.by + ')') : '') + '</button>';
+    h += '<button type="button" class="box' + (ui.fresh === key ? ' fresh' : '') + '" data-act="tick" data-k="' + key + '" aria-pressed="' + !!rec + '" aria-label="' + DUTIES[d].name + (rec ? ', done' : '') + '"' + (canTick ? '' : ' disabled') + '>' + (rec ? tickSvg(key + rec.at, 'var(--pen-' + rec.by + ')') : '') + '</button>';
     h += '<div><div class="duty-h"><span class="duty-name' + (rec ? ' off ' + pcls(rec.by) : '') + '">' + DUTIES[d].name + '</span><span class="dots"></span>'
       + '<span class="assignee">' + (mine ? '' : (x.by ? '<span class="was ' + pcls(x.by) + '">' + NAME[x.printed] + '</span> ' + hand(x.by, NAME[x.person], '') : NAME[x.person])) + '</span>' + (isLate ? '<span class="stamp">late</span>' : '') + '</div>';
     if (rec) { h += '<div class="done-note">' + hand(rec.by, QUIPS[d][rec.q || 0] + (mine ? '' : ' — ' + NAME[rec.by]), 'hand-md') + '</div>'; }
@@ -450,12 +448,17 @@ p { margin: 0; }
     if (doc.turns.length > 60) { doc.turns = doc.turns.slice(-60); }
     doc.full = null; docs[id] = doc; celebrate(false); render(); write(id, doc);
   }
+  function takeBack() {
+    var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || [];
+    if (!doc.turns.length || doc.turns[doc.turns.length - 1].by !== me) { return; }
+    doc.turns.pop(); docs[id] = doc; render(); write(id, doc);
+  }
   function binFull() { var id = 'trash/log', doc = clone(docs[id]); doc.turns = doc.turns || []; doc.full = { by: me, at: new Date().toISOString() }; docs[id] = doc; render(); write(id, doc); }
   function mark(roomId, e) {
     var id = 'rooms/' + roomId, doc = clone(docs[id]); doc.marks = doc.marks || {}; var now = Date.now();
     Object.keys(doc.marks).forEach(function (p) { if (now - new Date(doc.marks[p].at) >= MARK_TTL) { delete doc.marks[p]; } });
     if (e) { doc.marks[me] = { e: e, at: new Date().toISOString() }; } else { delete doc.marks[me]; }
-    docs[id] = doc; ui.pick = null; ui.confirmQ = null; render(); write(id, doc);
+    docs[id] = doc; ui.pick = null; render(); write(id, doc);
   }
   function celebrate(big) {
     if (typeof window.confetti !== 'function') { return; }
@@ -488,19 +491,23 @@ p { margin: 0; }
     if (!connected) { return; }
     if (act === 'tick') { toggleTick(b.dataset.k); }
     else if (act === 'trash') { tookOut(); }
+    else if (act === 'untrash') { takeBack(); }
     else if (act === 'full') { binFull(); }
-    else if (act === 'pick') { ui.pick = b.dataset.room || null; ui.confirmQ = null; render(); }
-    else if (act === 'askq') { ui.confirmQ = b.dataset.room; ui.pick = null; render(); }
+    else if (act === 'pick') { ui.pick = b.dataset.room || null; render(); }
     else if (act === 'mark') { mark(b.dataset.room, b.dataset.e); }
     else if (act === 'unmark') { mark(b.dataset.room, null); }
     else if (act === 'reassign') { ui.reassign = b.dataset.k || null; render(); }
     else if (act === 'setover') { setOver(b.dataset.k, b.dataset.p); }
   });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && sb) { loadAll(); } });
-  setInterval(function () { if (sb && !document.hidden && !ui.pick && !ui.confirmQ && !ui.reassign) { loadAll(); } }, 60 * 1000);
+  setInterval(function () { if (sb && !document.hidden && !ui.pick && !ui.reassign) { loadAll(); } }, 60 * 1000);
 
   /* ---------- boot ---------- */
-  if (cfg.pactUrl) { document.getElementById('foot').innerHTML = '<a href="' + esc(cfg.pactUrl) + '" target="_blank" rel="noopener" style="color:inherit">The agreement behind the sheet</a>'; }
+  var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  if (!standalone) {
+    var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    document.getElementById('foot').textContent = ios ? 'Add to Home Screen for the app: Share → Add to Home Screen.' : 'Install it: browser menu → Add to Home screen.';
+  } else if (cfg.pactUrl) { document.getElementById('foot').innerHTML = '<a href="' + esc(cfg.pactUrl) + '" target="_blank" rel="noopener" style="color:inherit">The agreement behind the sheet</a>'; }
   render();
   if (code) { connect(); }
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
